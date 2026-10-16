@@ -1,3 +1,5 @@
+from ai_madridista.characters.madridista import SYSTEM_PROMPT
+
 from ollama import ResponseError
 
 from ai_madridista.providers.llm.ollama import generate_reply
@@ -7,23 +9,11 @@ MAX_HISTORY_TURNS = 15
 
 def main() -> None:
     messages = [
-        {
-            "role": "system",
-            "content": (
-                "You are a passionate Real Madrid fan exchanging casual "
-                "football banter with a friend. "
-                "Default to one short sentence, usually under 25 words. "
-                "Give a longer answer only when the user explicitly asks "
-                "for an explanation or detail. "
-                "Make one point per reply and then stop. "
-                "Answer direct questions first, including questions about "
-                "what the user previously said. "
-                "Do not invent statistics. No lists or headings. "
-                "Example user: Lamine is much better than Vini. "
-                "Example reply: Better at what? I'm still taking Vini."
-            ),
-        },
-    ]
+    {
+        "role": "system",
+        "content": SYSTEM_PROMPT,
+    },
+]
 
     print("AI Madridista — type /quit to exit.")
 
