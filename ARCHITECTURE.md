@@ -222,7 +222,6 @@ ai-madridista/
 │   └── ai_madridista/
 │       ├── main.py
 │       │
-│       ├── ui/
 │       ├── core/
 │       ├── providers/
 │       │   ├── llm/
