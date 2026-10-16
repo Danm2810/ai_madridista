@@ -1,4 +1,5 @@
 from ollama import ResponseError, chat
+MAX_HISTORY_TURNS = 15
 
 
 def main() -> None:
@@ -60,6 +61,11 @@ def main() -> None:
             continue
 
         messages.append({"role": "assistant", "content": reply})
+        # Keep the system instructions and recent complete exchanges.
+        history_limit = MAX_HISTORY_TURNS * 2
+
+        if len(messages) > 1 + history_limit:
+            messages = [messages[0]] + messages[-history_limit:]
 
         print(f"Madridista: {reply}")
 
