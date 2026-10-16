@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ai-madridista"
+version = "0.1.0"
+description = "A local-first football AI character for terminal conversations."
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "ollama>=0.6,<1",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8,<10",
+]
+
+[project.scripts]
+ai-madridista = "ai_madridista.main:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
