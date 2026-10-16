@@ -1,14 +1,15 @@
 from ollama import chat
 
+from ai_madridista.config import MODEL, NUM_CTX, NUM_PREDICT
 
 def generate_reply(messages: list[dict[str, str]]) -> str:
     request = dict(
-        model="gemma4:e4b",
+        model=MODEL,
         messages=messages,
         think=False,
         options={
-            "num_ctx": 4096,
-            "num_predict": 100,
+            "num_ctx": NUM_CTX,
+            "num_predict": NUM_PREDICT,
         },
     )
 
