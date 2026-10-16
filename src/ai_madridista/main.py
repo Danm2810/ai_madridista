@@ -1,5 +1,7 @@
 from ai_madridista.characters.madridista import SYSTEM_PROMPT
 
+from ai_madridista.core.conversation import Conversation
+
 from ollama import ResponseError
 
 from ai_madridista.providers.llm.ollama import generate_reply
@@ -8,12 +10,8 @@ MAX_HISTORY_TURNS = 15
 
 
 def main() -> None:
-    messages = [
-    {
-        "role": "system",
-        "content": SYSTEM_PROMPT,
-    },
-]
+
+    conversation = Conversation(SYSTEM_PROMPT)
 
     print("AI Madridista — type /quit to exit.")
 
@@ -31,29 +29,26 @@ def main() -> None:
         if not user_input:
             continue
 
-        messages.append({"role": "user", "content": user_input})
+        conversation.add_user_message(user_input)
 
         try:
-            reply = generate_reply(messages)
+            reply = generate_reply(conversation.messages)
         except (ConnectionError, ResponseError) as error:
-            messages.pop()
+            conversation.discard_pending_user_message()
             print(f"Could not get a reply: {error}")
             continue
         except KeyboardInterrupt:
-            messages.pop()
+            conversation.discard_pending_user_message()
             print("\nRequest interrupted. Exiting.")
             break
         if not reply.strip():
-            messages.pop()
+            conversation.discard_pending_user_message()
             print("The model returned an empty reply. Try again.")
             continue
 
-        messages.append({"role": "assistant", "content": reply})
-        # Keep the system instructions and recent complete exchanges.
-        history_limit = MAX_HISTORY_TURNS * 2
+        conversation.add_assistant_message(reply)
 
-        if len(messages) > 1 + history_limit:
-            messages = [messages[0]] + messages[-history_limit:]
+        conversation.trim_history(MAX_HISTORY_TURNS)
 
         print(f"Madridista: {reply}")
 
