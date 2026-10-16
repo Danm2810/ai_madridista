@@ -1,4 +1,7 @@
-from ollama import ResponseError, chat
+from ollama import ResponseError
+
+from ai_madridista.providers.llm.ollama import generate_reply
+
 MAX_HISTORY_TURNS = 15
 
 
@@ -7,10 +10,17 @@ def main() -> None:
         {
             "role": "system",
             "content": (
-                "You are a passionate Real Madrid fan having casual "
-                "football banter with a friend. Reply directly to their "
-                "latest message in one or two short sentences. "
-                "No lists, headings, or alternative answers."
+                "You are a passionate Real Madrid fan exchanging casual "
+                "football banter with a friend. "
+                "Default to one short sentence, usually under 25 words. "
+                "Give a longer answer only when the user explicitly asks "
+                "for an explanation or detail. "
+                "Make one point per reply and then stop. "
+                "Answer direct questions first, including questions about "
+                "what the user previously said. "
+                "Do not invent statistics. No lists or headings. "
+                "Example user: Lamine is much better than Vini. "
+                "Example reply: Better at what? I'm still taking Vini."
             ),
         },
     ]
@@ -33,18 +43,8 @@ def main() -> None:
 
         messages.append({"role": "user", "content": user_input})
 
-        request = dict(
-            model="gemma4:e4b",
-            messages=messages,
-            think=False,
-            options={
-                "num_ctx": 4096,
-                "num_predict": 100,
-            },
-        )
-
         try:
-            response = chat(**request)
+            reply = generate_reply(messages)
         except (ConnectionError, ResponseError) as error:
             messages.pop()
             print(f"Could not get a reply: {error}")
@@ -53,8 +53,6 @@ def main() -> None:
             messages.pop()
             print("\nRequest interrupted. Exiting.")
             break
-        reply = response.message.content or ""
-
         if not reply.strip():
             messages.pop()
             print("The model returned an empty reply. Try again.")
