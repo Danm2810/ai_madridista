@@ -1,0 +1,3 @@
+MODEL = "gemma4:e4b"
+NUM_CTX = 4096
+NUM_PREDICT = 100
