@@ -9,6 +9,7 @@ dist/
 .ruff_cache/
 .coverage
 htmlcov/
+.venv-chatterbox/
 
 # Local secrets and application data
 .env
