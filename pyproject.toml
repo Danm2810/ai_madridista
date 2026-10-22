@@ -18,7 +18,12 @@ dev = [
 ]
 
 [project.scripts]
-ai-madridista = "ai_madridista.main:main"
+ai-madridista = "main:main"
+
+[tool.setuptools]
+py-modules = ["main", "config"]
 
 [tool.setuptools.packages.find]
-where = ["src"]
+where = ["."]
+include = ["characters", "characters.*", "core", "core.*", "providers", "providers.*"]
+namespaces = false

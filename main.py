@@ -1,10 +1,10 @@
-from ai_madridista.characters.madridista import SYSTEM_PROMPT
+from characters.madridista import SYSTEM_PROMPT
 
-from ai_madridista.core.conversation import Conversation
+from core.conversation import Conversation
 
 from ollama import ResponseError
 
-from ai_madridista.providers.llm.ollama import generate_reply
+from providers.llm.ollama import generate_reply
 
 MAX_HISTORY_TURNS = 15
 

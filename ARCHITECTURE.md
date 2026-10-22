@@ -1,411 +1,202 @@
 # AI Madridista — Architecture & Development Plan
 
-**Status:** Planning  
-**Version:** 0.1  
-**Development philosophy:** Local-first, modular, extensible, and cost-conscious.
+**Status:** Working terminal text chat; standalone local speech experiments
+
+**Version:** 0.1.0
+
+**Last updated:** October 22, 2026
+
+**Development philosophy:** Local-first, modular, incremental, and cost-conscious.
 
 ## Project Vision
 
-AI Madridista is my personal AI character designed to be an obnoxious, delusional, relentlessly biased Real Madrid supporter (literally any of my friends).
+AI Madridista is a personal football AI character: a passionately biased Real Madrid supporter for casual football banter. The current application runs through the terminal. Voice conversations, persistent memory, optional web search, and additional characters remain future goals.
 
-You can argue with the AI through text or voice. The character will defend Real Madrid at every opportunity, make ridiculous football arguments, exaggerate the club's achievements, and find increasingly absurd ways to justify its very dumb opinions.
+The character should remain recognizable as roleplay. Its current instructions favor short replies, answering direct questions, and avoiding invented statistics.
 
-The underlying application may eventually support additional characters, personalities, AI models, and interaction methods.
+## Current Implementation
 
-## Core Objectives
+- Terminal text conversation with Ollama and `gemma4:e4b`.
+- Character instructions defined as `SYSTEM_PROMPT` in `characters/madridista.py`.
+- In-memory conversation history with a system message and up to 15 completed user/assistant exchanges retained after a successful reply.
+- Handling for blank input, `/quit`, end of input, keyboard interruption, connection/model errors, and empty replies.
+- Separate Piper and Chatterbox-Turbo speech experiments.
+- Root-level application modules and packages; no `src/` or nested `ai_madridista/` package.
 
-- Build a program ran through the terminal.
-- Support both text conversations and push-to-talk voice interaction.
-- Keep microphone recording disabled unless a push-to-talk button is activated.
-- Generate spoken responses using text-to-speech.
-- Create configurable AI personalities.
-- Maintain conversation history and persistent memory.
-- Allow optional internet searches for current football information.
-- Run locally without recurring API costs.
-- Support cloud AI providers through configuration changes.
-- Keep components independent and replaceable.
-- Make the project suitable for open-source development on GitHub.
+The app currently returns complete text replies. It does not stream tokens, synthesize replies, record microphone input, persist conversations, or call external tools.
 
-## Technology Stack
+## Technology and Environments
 
-| Component | Initial Selection |
+| Component | Current choice and status |
 |---|---|
-| Language | Python 3.12 |
-| Application framework | lightweight cli module (vscode built-in terminal) |
-| Local inference | Ollama |
-| Initial LLM | Gemma 4 E4B |
+| Language | Python 3.12; Chatterbox environment uses Python 3.12.10 |
+| Interface | Python terminal loop, commonly run in VS Code |
+| LLM runtime | Local Ollama server |
+| Model | `gemma4:e4b`, installed in `A:\Ollama\models` |
 | GPU | NVIDIA RTX 3070, 8 GB VRAM |
 | System memory | 32 GB RAM |
-| Speech recognition | faster-whisper |
-| Speech synthesis | Piper TTS |
-| Persistent storage | SQLite |
-| Character configuration | JSON |
-| Application configuration | YAML |
-| Web search | Pluggable search provider |
-| Optional cloud models | OpenAI, Anthropic, others |
-| Version control | Git / GitHub |
-| Testing | pytest |
+| Main application environment | `.venv`; Ollama Python client and Piper |
+| Speech experiment environment | `.venv-chatterbox`; Chatterbox-Turbo, Torch 2.6.0+cu124, torchaudio 2.6.0, sounddevice |
+| Active speech experiment | Local Chatterbox-Turbo using CUDA and reference audio |
+| Earlier speech experiment | Piper with a local ONNX voice |
+| Configuration | Python constants in `config.py` |
+| Character definition | Python string in `characters/madridista.py` |
+| Tests | pytest declared as an optional development dependency; no saved automated tests yet |
 
-All technology choices are subject to revision based on performance, experiments and development requirements.
+The two environments remain separate. Consolidation is deferred until a later compatibility review. VS Code's selected interpreter controls import diagnostics and can differ from the activated terminal environment.
 
-### Hardware considerations
+`pyproject.toml` declares the main app's Ollama dependency and optional pytest dependency. Speech experiment dependencies are currently managed separately; the project file does not recreate either complete speech setup.
 
-Gemma 4 E4B will be our first candidate, but we will benchmark memory usage and inference speed.
+Chatterbox CUDA generation has worked on the RTX 3070. Simultaneous LLM and speech-model operation still needs memory and latency measurements before integration.
 
-The standard model may exceed available VRAM. We will investigate smaller quantizations and alternative models if necessary.
-
-We should avoid designing around assumptions about model performance before testing on the RTX 3070.
-
-## System Architecture
-
-The application will follow a modular architecture with clearly separated responsibilities.
-
-### Terminal Interface
-
-Responsible for:
-
-- Displaying conversation history.
-- Accepting text messages.
-- Handling push-to-talk controls.
-- Displaying the active character.
-- Playing generated speech.
-- Showing loading, recording, and response states.
-- Providing basic configuration controls.
-
-The interface should not contain model-specific logic.
-
-### Conversation Orchestrator
-
-The central application component.
-
-Responsible for:
-
-- Receiving text or transcribed voice input.
-- Loading the selected character's instructions.
-- Retrieving relevant conversation history.
-- Sending requests to the selected LLM provider.
-- Handling tool requests.
-- Streaming generated responses.
-- Coordinating speech generation.
-- Saving conversation history.
-
-### LLM Provider Layer
-
-Provides a common interface for interacting with different models.
-
-Initial implementation:
-
-- Ollama running Gemma 4 locally.
-
-Future implementations:
-
-- OpenAI API.
-- Anthropic API.
-- Alternative Ollama models.
-- Pewdiepie's Ajax to fine-tune the task at hand (locally run)
-- Other compatible inference servers.
-
-Provider selection will initially happen through configuration files, not a dedicated settings interface.
-
-Changing providers should not require modifications to the conversation orchestrator.
-
-Provider-specific capabilities, such as tool calling or structured output, will be handled through adapters and capability checks.
-
-### Audio System
-
-Two independent components:
-
-**Speech-to-text**
-
-- Capture microphone audio only while push-to-talk is active.
-- Transcribe recorded audio using faster-whisper.
-- Submit the transcription as a normal user message.
-- Discard temporary recordings by default.
-
-**Text-to-speech**
-
-- Receive generated AI responses.
-- Convert text to audio using Piper.
-- Play speech through the selected output device.
-- Support interruption and cancellation.
-
-Both components will use replaceable provider interfaces to support cloud services later.
-
-### Character Engine
-
-Characters will be defined independently from the underlying model.
-
-Each character can have:
-
-- Name and description.
-- System instructions.
-- Personality traits.
-- Speaking style.
-- Voice configuration.
-- Behavioral rules.
-- Individual conversation history.
-- Optional character-specific memory.
-
-The first character will be **AI Madridista**.
-
-Its personality should include:
-
-- Extreme Real Madrid bias.
-- Unreasonable confidence.
-- Constant football banter.
-- Ridiculous justifications for losses.
-- Obsessive comparisons with Barcelona.
-- Selective interpretation of football statistics.
-- Comedic overreactions.
-- A refusal to concede arguments easily.
-
-The character may be deliberately delusional or inaccurate for comedic purposes. Its statements should remain recognizable as roleplay rather than authoritative football reporting.
-
-Future characters can be added without modifying the main application.
-
-### Memory System
-
-SQLite will store:
-
-- Conversations.
-- Individual messages.
-- Character identities.
-- Session metadata.
-- User-approved long-term memories.
-
-Memory will have two initial levels:
-
-1. **Conversation memory:** Recent messages included in the current conversation.
-2. **Persistent memory:** Selected information retained between sessions.
-
-Long-term memory retrieval and automatic summarization can be introduced later.
-
-Memory must remain independent of the selected model.
-
-### Tool System
-
-Tools extend the AI beyond normal text generation.
-
-Initial planned tool:
-
-- Web search for current football news, results, transfers, and statistics.
-
-The orchestrator will manage tool execution independently from the model provider.
-
-Search should be optional, with configurable permissions and a clear distinction between verified information and character-generated opinions.
-
-Future possibilities:
-
-- Football statistics APIs.
-- Live match information.
-- Wikipedia retrieval.
-- Custom knowledge bases.
-- Multi-character conversations.
-
-## Proposed Repository Structure
+## Current Repository Structure
 
 ```text
-ai-madridista/
-│
+ai_madridista/                 # Repository root: A:\AI Madridista\ai_madridista
+├── .gitignore
 ├── README.md
 ├── ARCHITECTURE.md
 ├── pyproject.toml
-├── .gitignore
-├── .env.example
-│
-├── config/
-│   ├── settings.yaml
-│   └── characters/
-│       └── madridista.json
-│
-├── src/
-│   └── ai_madridista/
-│       ├── main.py
-│       │
-│       ├── core/
-│       ├── providers/
-│       │   ├── llm/
-│       │   ├── stt/
-│       │   └── tts/
-│       │
-│       ├── characters/
-│       ├── memory/
-│       ├── audio/
-│       ├── tools/
-│       └── config/
-│
-├── tests/
-│
-└── data/
-    └── .gitkeep
+├── main.py
+├── config.py
+├── characters/
+│   ├── __init__.py
+│   └── madridista.py
+├── core/
+│   ├── __init__.py
+│   └── conversation.py
+├── providers/
+│   ├── __init__.py
+│   └── llm/
+│       ├── __init__.py
+│       └── ollama.py
+├── try_chatterbox.py
+├── try_piper.py
+├── data/                     # Local voice assets and generated audio; ignored
+├── .venv/                    # Existing app/Piper environment; ignored
+└── .venv-chatterbox/          # Existing Chatterbox environment; ignored
 ```
 
-The `data/` directory will hold local application data and databases, which should be excluded from version control.
+Generated caches and packaging metadata are omitted from this diagram. Add future modules when needed rather than creating unused placeholder packages.
 
-Secrets, API credentials, recordings, and private conversations must never be committed to GitHub.
+## Application Flow and Responsibilities
 
-The structure is provisional and should evolve as implementation requirements become clearer.
+### Terminal entry point — `main.py`
 
-## 6. Development Roadmap
+1. Create a `Conversation` with the character's system instructions.
+2. Read and validate terminal input.
+3. Append a user message and call `generate_reply()`.
+4. Remove the pending user message if generation fails, is interrupted, or returns empty text.
+5. Append a successful assistant reply, trim retained history, and display the reply.
 
-### Phase 1 — Local Model Foundation
+`MAX_HISTORY_TURNS = 15` controls retained exchanges. Replies are printed only after generation completes. The terminal layer currently also coordinates the conversation; there is no separate orchestrator module yet.
 
-**Goal:** Establish a working local AI conversation.
+### Conversation state — `core/conversation.py`
 
-- Install and configure Ollama.
-- Download and benchmark Gemma 4.
-- Verify GPU acceleration.
-- Create the Python project structure.
-- Implement the initial LLM provider abstraction.
-- Test basic text conversations.
+`Conversation` owns the in-memory message list and provides methods to append messages, discard a pending user message, and trim history while preserving the system instructions. Closing the process loses this history.
 
-**Milestone:** Communicate with Gemma 4 through Python.
+### LLM adapter — `providers/llm/ollama.py`
 
-### Phase 2 — AI Madridista Personality
+`generate_reply(messages)` calls the installed Ollama library's `chat()` function and returns the assistant's text. It reads these values from `config.py`:
 
-**Goal:** Create the first functional character.
+- `MODEL = "gemma4:e4b"`
+- `NUM_CTX = 4096`
+- `NUM_PREDICT = 100`
 
-- Define the Madridista personality.
-- Implement character configuration loading.
-- Establish behavioral instructions.
-- Test consistency across multiple conversations.
-- Refine comedic behavior and argumentative style.
+The request also sets `think=False`. Ollama must be running separately and able to find the configured model. This adapter is a starting point for replaceable providers; provider selection, capability negotiation, streaming, and a formal shared interface are not implemented.
 
-**Milestone:** A working AI Madridista that can argue through text.
+### Character — `characters/madridista.py`
 
-### Phase 3 — Desktop Interface (tabled)
+A single Python system-prompt constant defines the current personality. It encourages concise football banter, usually one sentence under 25 words, while allowing longer answers when explicitly requested. JSON character files, character selection, and per-character memory are future work.
 
-**Goal:** Replace terminal interaction with a native application.
+## Standalone Speech Experiments
 
-- Build the PySide6 interface.
-- Add conversation display.
-- Add text input.
-- Implement streaming responses.
-- Add character selection infrastructure.
+### Chatterbox-Turbo — `try_chatterbox.py`
 
-**Milestone:** Functional Windows desktop text-chat application.
+The current script loads `ChatterboxTurboTTS.from_pretrained(device="cuda")`, generates audio for manually written chunks, and plays audio using `sounddevice`. CUDA synchronization surrounds timing measurements. Playback waits before starting the next generated chunk, allowing the following generation to begin while the current chunk plays.
 
-### Phase 4 — Voice Interaction
+Reference audio currently points to:
 
-**Goal:** Enable natural spoken arguments.
+```text
+C:\Users\Daniel Mikhail\Downloads\demoman.wav
+```
 
-- Implement push-to-talk.
-- Integrate faster-whisper.
-- Integrate Piper TTS.
-- Add audio playback and interruption.
-- Optimize latency.
+The reference is 13.14 seconds at 44,100 Hz. The voice and Scottish accent have sounded good in local testing; mannerism tuning is deferred. A `LoRACompatibleLinear` deprecation warning has appeared without preventing generation.
 
-**Milestone:** Speak to AI Madridista and hear it respond.
+**Next agreed step:** Replace manual chunks with automatic splitting of one text string, and test that in this standalone script before connecting AI replies. In the currently saved file, the `text` string is unused and no automatic splitting function is present.
 
-### Phase 5 — Persistent Memory
+### Piper — `try_piper.py`
 
-**Goal:** Maintain conversations across sessions.
+The earlier experiment loads `data/voices/en_US-bryce-medium.onnx` with `PiperVoice` and writes a fixed spoken line to `data/piper_test.wav`. It is retained as a separate experiment. Its paths are relative to the terminal's working directory, so run it from the repository root.
 
-- Implement SQLite storage.
-- Save conversation history.
-- Restore previous sessions.
-- Introduce character-specific memory.
-- Add memory deletion controls.
+Neither script is integrated into the main conversation loop. Speech model loading, playback, and asset paths remain experiment-specific.
 
-**Milestone:** AI Madridista can remember previous arguments.
+## Running the Current Code
 
-### Phase 6 — External Tools
+From `A:\AI Madridista\ai_madridista` in PowerShell:
 
-**Goal:** Give the character access to current information.
+```powershell
+# Main text chat
+& .\.venv\Scripts\python.exe main.py
 
-- Implement the tool interface.
-- Add optional web search.
-- Introduce source attribution.
-- Test tool execution with local models.
-- Add permission controls.
+# Earlier Piper experiment
+& .\.venv\Scripts\python.exe try_piper.py
 
-**Milestone:** AI Madridista can argue about current football events using retrieved information.
+# Current Chatterbox experiment
+& .\.venv-chatterbox\Scripts\python.exe try_chatterbox.py
+```
 
-### Phase 7 — Cloud Provider Support
+Use `python`, not the unavailable Windows `py` launcher. Explicit interpreter paths work even when the terminal has the other environment activated.
 
-**Goal:** Enable optional paid models without restructuring the application.
+Packaging defines the `ai-madridista` command as `main:main`, includes root modules `main` and `config`, and discovers `characters`, `core`, and `providers`. An installed command may require refreshing its editable installation after packaging changes; launching `main.py` directly avoids relying on an older installed entry point.
 
-- Implement cloud LLM adapters.
-- Add cloud STT/TTS alternatives.
-- Configure API credentials securely.
-- Add usage and cost tracking.
-- Test local/cloud provider switching.
-- Add budget safeguards.
+## Development Roadmap
 
-**Milestone:** Switch between local and cloud services through configuration.
+### Working foundation
 
-### Phase 8 — Expansion and Experimentation
+Local text chat, a first character prompt, in-memory history, and basic failure handling are implemented. Continue assessing reply quality and performance without treating latency or memory use as fully benchmarked.
 
-Potential future features:
+### Immediate work — standalone speech
 
-- Multiple AI personalities.
-- AI-to-AI arguments.
-- Animated avatars.
-- Emotional voice delivery.
-- Football-specific knowledge retrieval.
-- More advanced long-term memory.
-- Character-specific tools.
-- Additional local model support.
+1. Implement automatic text splitting in the Chatterbox experiment.
+2. Check sentence boundaries, chunk size, continuity, and playback timing.
+3. Measure GPU memory and latency with Ollama and Chatterbox together.
+4. Integrate generated AI replies only after the standalone behavior is satisfactory.
 
-These are possibilities, not initial requirements.
+### Planned — voice conversations
 
-## 7. Engineering Principles
+- Introduce a replaceable local TTS interface and connect the validated speech experiment.
+- Add playback interruption and cancellation.
+- Add push-to-talk microphone capture and evaluate faster-whisper for transcription.
+- Keep microphone recording disabled until push-to-talk is activated.
+- Submit transcribed text through the same conversation path as typed input.
 
-**Local-first:** Core functionality should work without paid APIs.
+These components are planned, not currently implemented. Terminal use remains the priority; a PySide6 desktop interface is tabled.
 
-**Provider independence:** Models, speech services, and search providers must remain interchangeable.
+### Planned — persistent memory and configuration
 
-**Configuration over code changes:** Routine changes to models and character settings should not require editing application logic.
+- Evaluate SQLite for saved conversations and user-approved long-term memories.
+- Add restore and deletion controls before relying on persisted data.
+- Consider external character/configuration files when needed; JSON and YAML are earlier proposals, not current formats.
+- Keep memory responsibilities independent of the model adapter.
 
-**Incremental development:** Each phase should produce a testable result before the next begins.
+### Planned — optional tools and expansion
 
-**Performance awareness:** Prioritize responsive conversations and efficient GPU usage.
+Optional web search may later provide current football information with clear source attribution. Tool execution, search providers, additional characters, and richer provider interfaces remain future work. No web search or other tool execution is currently connected to the app.
 
-**Cost awareness:** Cloud features remain optional, with usage tracking and spending safeguards.
+Cloud providers remain an optional future possibility. Current work stays local; paid or cloud speech services should only be revisited at the user's request.
 
-**Testability:** Core logic should be testable without the desktop interface or active model services.
+## Engineering and Data Practices
 
-**Extensibility:** New characters, tools, and providers should be easy to add.
+- The user writes important application code, guided through one small actionable step at a time. Housekeeping and explicitly requested fixes can be handled directly.
+- Preserve existing work and environments. Review proposed fixes and cleanup before acting when requested.
+- Never create Git commits or modify backup branches as part of this workflow.
+- Treat synced ChatGPT project sources as read-only references; edit the local working repository.
+- Keep secrets, voice recordings, generated audio, private conversations, model files, environments, and generated packaging artifacts out of version control as appropriate. Local application data belongs under `data/`; Ollama models live outside the repository.
+- Validate changes with focused checks. Saved automated tests and reproducible speech setup instructions remain useful future maintenance work.
 
-## 8. Current Decisions and Open Questions
+## Definition of Success
 
-### Confirmed
+The first complete voice-enabled version should support terminal text and push-to-talk conversations with a consistent Madridista personality, local speech generation, and controlled conversation persistence. Optional current-information tools can follow. Core use should remain local and free of recurring API costs.
 
-- Python.
-- Ollama as the initial runtime.
-- Gemma 4 as the first model candidate.
-- RTX 3070 with 8 GB VRAM.
-- 32 GB system RAM.
-- Push-to-talk and text interaction.
-- Persistent memory.
-- Multiple-character architecture.
-- Local-first operation.
-- Optional cloud integration.
-- GitHub-hosted development.
-
-### To Be Determined
-
-- Exact Gemma 4 quantization.
-- Actual local inference performance.
-- Push-to-talk keyboard shortcut.
-- Piper voice selection.
-- Speech streaming strategy.
-- Memory retrieval and summarization policies.
-- Web search provider.
-- Character personality details.
-- Desktop visual design.
-- Packaging and distribution strategy.
-
-## 9. Definition of Success
-
-The first complete version should allow me to open the terminal and launch AI Madridista, and argue with it using either text or push-to-talk voice.
-
-The character should respond with a consistent comedic personality, speak its responses, remember previous conversations, and optionally retrieve current football information.
-
-All core functionality should operate locally without requiring paid cloud services.
-
-Cloud models and additional characters should be possible without redesigning the application.
-
----
-
-**Document status:** Living architecture document. Decisions, technologies, and milestones may be revised throughout development.
+The current milestone is a working text app plus standalone speech generation. This document distinguishes that implemented state from the goals above and should evolve with the code.

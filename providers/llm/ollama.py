@@ -1,6 +1,6 @@
 from ollama import chat
 
-from ai_madridista.config import MODEL, NUM_CTX, NUM_PREDICT
+from config import MODEL, NUM_CTX, NUM_PREDICT
 
 def generate_reply(messages: list[dict[str, str]]) -> str:
     request = dict(
